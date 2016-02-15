@@ -1,0 +1,368 @@
+---
+title: "Road Density - Regressions tests"
+output: html_document
+---
+
+```{r, include=FALSE}
+library(maptools)
+library(rgdal)
+library(spdep)
+library(ctv)
+library(spgwr)
+```
+
+```{r, include=FALSE}
+
+##Data frames##
+
+Countries = c("Liberia", "Guinea", "Ghana", "Senegal") 
+OLR = c(0, 0, 0, 0)
+Lag = c(0, 0, 0, 0) 
+Err = c(0, 0, 0, 0)
+Durb = c(0, 0, 0, 0)
+GWR = c(0, 0, 0, 0)
+AIC = data.frame(Countries, Lag, Err,Durb, GWR)
+SSE = data.frame(Countries, Lag, Err,Durb, GWR)
+LR = data.frame(Countries, Lag, Err, Durb)
+PLR = data.frame(Countries, Lag, Err, Durb)
+MORI = data.frame(Countries, OLR, Durb, GWR)
+MORIP = data.frame(Countries, OLR, Durb, GWR)
+```
+
+```{r, include=FALSE}
+
+##LIBERIA##
+
+data_location <- "C:/Users/Bogdan/Desktop/Regressions_Scripts/Complete_SHP"
+admin_useful <- readOGR(data_location,'liberia_complete',verbose=FALSE)
+```
+
+```{r, include=FALSE}
+drops <- c("430_30_04","430_09_12") #Liberia
+admin_useful <-subset(admin_useful, !(UBID %in% drops))
+```
+
+```{r, include=FALSE}
+admin_queen1<-poly2nb(admin_useful)
+coords<-coordinates(admin_useful)
+plot(admin_useful)
+plot(admin_queen1, coords, add=T)
+admin_queen1_wb<-nb2listw(admin_queen1,style="B")
+```
+
+```{r,include=FALSE}
+
+regression_lm<-lm(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful)
+MI<-moran.test(residuals(regression_lm),admin_queen1_wb)
+MORI$OLR[1]=MI$estimate[1]
+MORIP$OLR[1]=MI$p.value
+```
+
+```{r,include=FALSE}
+
+##Spatial Lag##
+regression_lag<-lagsarlm(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful,admin_queen1_wb)
+SSE$Lag[1]<-summary(regression_lag)$SSE
+AIC$Lag[1]<-summary(regression_lag)$AIC
+LR$Lag[1]<-summary(regression_lag)$LR1$statistic
+PLR$Lag[1]<-summary(regression_lag)$LR1$p.value
+```
+
+```{r,include=FALSE}
+
+##Spatial error##
+
+regression_err<-errorsarlm(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful,admin_queen1_wb)
+SSE$Err[1]<-summary(regression_err)$SSE
+AIC$Err[1]<-summary(regression_err)$AIC
+LR$Err[1]<-summary(regression_err)$LR1$statistic
+PLR$Err[1]<-summary(regression_err)$LR1$p.value
+```
+
+```{r,include=FALSE}
+
+##Spatial Durbin##
+
+regression_durb<-lagsarlm(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful,admin_queen1_wb,type="mixed")
+SSE$Durb[1]<-summary(regression_durb)$SSE
+AIC$Durb[1]<-summary(regression_durb)$AIC
+LR$Durb[1]<-summary(regression_durb)$LR1$statistic
+PLR$Durb[1]<-summary(regression_durb)$LR1$p.value
+MI<-moran.test(residuals(regression_durb),admin_queen1_wb)
+MORI$Durb[1]=MI$estimate[1]
+MORIP$Durb[1]=MI$p.value
+```
+
+```{r, include=FALSE}
+
+##GWR##
+
+GWRbandwidth <- gwr.sel(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful, adapt=T) 
+gwr.model2 = gwr(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful, adapt=GWRbandwidth, hatmatrix=TRUE,predict=TRUE, se.fit=TRUE) 
+SSE$GWR[1]<-gwr.model2$results$rss
+AIC$GWR[1]<-gwr.model2$results$AICh
+MI<-moran.test(gwr.model2$SDF$gwr.e,admin_queen1_wb)
+MORI$GWR[1]=MI$estimate[1]
+MORIP$GWR[1]=MI$p.value
+```
+
+```{r, include=FALSE}
+
+##GUINEA##
+
+data_location <- "C:/Users/Bogdan/Desktop/Regressions_Scripts/Complete_SHP"
+admin_useful <- readOGR(data_location,'guinea_complete',verbose=FALSE)
+```
+
+```{r, include=FALSE}
+drops <- c("96_2_6_41","96_2_6_38","96_2_6_40","96_2_6_42","96_2_6_39") #Guinea
+admin_useful <-subset(admin_useful, !(UBID %in% drops))
+```
+
+```{r, include=FALSE}
+admin_queen1<-poly2nb(admin_useful)
+coords<-coordinates(admin_useful)
+plot(admin_useful)
+plot(admin_queen1, coords, add=T)
+admin_queen1_wb<-nb2listw(admin_queen1,style="B")
+```
+
+```{r,include=FALSE}
+
+regression_lm<-lm(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful)
+MI<-moran.test(residuals(regression_lm),admin_queen1_wb)
+MORI$OLR[2]=MI$estimate[1]
+MORIP$OLR[2]=MI$p.value
+```
+
+```{r,include=FALSE}
+
+##Spatial Lag##
+
+regression_lag<-lagsarlm(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful,admin_queen1_wb)
+SSE$Lag[2]<-summary(regression_lag)$SSE
+AIC$Lag[2]<-summary(regression_lag)$AIC
+LR$Lag[2]<-summary(regression_lag)$LR1$statistic
+PLR$Lag[2]<-summary(regression_lag)$LR1$p.value
+```
+
+```{r,include=FALSE}
+
+##Spatial error##
+
+regression_err<-errorsarlm(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful,admin_queen1_wb)
+SSE$Err[2]<-summary(regression_err)$SSE
+AIC$Err[2]<-summary(regression_err)$AIC
+LR$Err[2]<-summary(regression_err)$LR1$statistic
+PLR$Err[2]<-summary(regression_err)$LR1$p.value
+```
+
+```{r,include=FALSE}
+
+##Spatial Durbin##
+
+regression_durb<-lagsarlm(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful,admin_queen1_wb,type="mixed")
+SSE$Durb[2]<-summary(regression_durb)$SSE
+AIC$Durb[2]<-summary(regression_durb)$AIC
+LR$Durb[2]<-summary(regression_durb)$LR1$statistic
+PLR$Durb[2]<-summary(regression_durb)$LR1$p.value
+MI<-moran.test(residuals(regression_durb),admin_queen1_wb)
+MORI$Durb[2]=MI$estimate[1]
+MORIP$Durb[2]=MI$p.value
+```
+
+```{r, include=FALSE}
+
+##GWR##
+
+GWRbandwidth <- gwr.sel(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful, adapt=T) 
+gwr.model2 = gwr(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful, adapt=GWRbandwidth, hatmatrix=TRUE,predict=TRUE, se.fit=TRUE) 
+SSE$GWR[2]<-gwr.model2$results$rss
+AIC$GWR[2]<-gwr.model2$results$AICh
+MI<-moran.test(gwr.model2$SDF$gwr.e,admin_queen1_wb)
+MORI$GWR[2]=MI$estimate[1]
+MORIP$GWR[2]=MI$p.value
+```
+
+
+```{r, include=FALSE}
+
+##GHANA##
+
+data_location <- "C:/Users/Bogdan/Desktop/Regressions_Scripts/Complete_SHP"
+admin_useful <- readOGR(data_location,'ghana_complete_corrected',verbose=FALSE)
+```
+
+```{r, include=FALSE}
+drops <- c("288_119","288_36","288_118","288_139") #Ghana 
+admin_useful <-subset(admin_useful, !(UBID %in% drops))
+```
+
+```{r, include=FALSE}
+admin_queen1<-poly2nb(admin_useful)
+coords<-coordinates(admin_useful)
+plot(admin_useful)
+plot(admin_queen1, coords, add=T)
+admin_queen1_wb<-nb2listw(admin_queen1,style="B")
+```
+
+```{r,include=FALSE}
+
+regression_lm<-lm(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful)
+MI<-moran.test(residuals(regression_lm),admin_queen1_wb)
+MORI$OLR[3]=MI$estimate[1]
+MORIP$OLR[3]=MI$p.value
+```
+
+```{r,include=FALSE}
+
+##Spatial Lag##
+
+regression_lag<-lagsarlm(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful,admin_queen1_wb)
+SSE$Lag[3]<-summary(regression_lag)$SSE
+AIC$Lag[3]<-summary(regression_lag)$AIC
+LR$Lag[3]<-summary(regression_lag)$LR1$statistic
+PLR$Lag[3]<-summary(regression_lag)$LR1$p.value
+```
+
+```{r,include=FALSE}
+
+##Spatial error##
+
+regression_err<-errorsarlm(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful,admin_queen1_wb)
+SSE$Err[3]<-summary(regression_err)$SSE
+AIC$Err[3]<-summary(regression_err)$AIC
+LR$Err[3]<-summary(regression_err)$LR1$statistic
+PLR$Err[3]<-summary(regression_err)$LR1$p.value
+```
+
+```{r,include=FALSE}
+
+## Spatial Durbin ##
+
+regression_durb<-lagsarlm(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful,admin_queen1_wb,type="mixed")
+SSE$Durb[3]<-summary(regression_durb)$SSE
+AIC$Durb[3]<-summary(regression_durb)$AIC
+LR$Durb[3]<-summary(regression_durb)$LR1$statistic
+PLR$Durb[3]<-summary(regression_durb)$LR1$p.value
+MI<-moran.test(residuals(regression_durb),admin_queen1_wb)
+MORI$Durb[3]=MI$estimate[1]
+MORIP$Durb[3]=MI$p.value
+```
+
+```{r, , include=FALSE}
+
+##GWR##
+
+GWRbandwidth <- gwr.sel(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful, adapt=T) 
+gwr.model2 = gwr(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful, adapt=GWRbandwidth, hatmatrix=TRUE,predict=TRUE, se.fit=TRUE) 
+SSE$GWR[3]<-gwr.model2$results$rss
+AIC$GWR[3]<-gwr.model2$results$AICh
+MI<-moran.test(gwr.model2$SDF$gwr.e,admin_queen1_wb)
+MORI$GWR[3]=MI$estimate[1]
+MORIP$GWR[3]=MI$p.value
+```
+
+```{r, include=FALSE}
+
+##SENEGAL##
+
+data_location <- "C:/Users/Bogdan/Desktop/Regressions_Scripts/Complete_SHP"
+admin_useful <- readOGR(data_location,'senegal_complete_corrected',verbose=FALSE)
+```
+
+```{r, include=FALSE}
+drops <- c("199_1_2_2_2001","199_1_2_2_2000","199_1_1_1_700") #Senegal - 199_1_3_3_21 might also be excluded
+admin_useful <-subset(admin_useful, !(UBID %in% drops))
+```
+
+```{r, include=FALSE}
+admin_queen1<-poly2nb(admin_useful)
+coords<-coordinates(admin_useful)
+plot(admin_useful)
+plot(admin_queen1, coords, add=T)
+admin_queen1_wb<-nb2listw(admin_queen1,style="B")
+```
+
+```{r,include=FALSE}
+
+regression_lm<-lm(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful)
+MI<-moran.test(residuals(regression_lm),admin_queen1_wb)
+MORI$OLR[4]=MI$estimate[1]
+MORIP$OLR[4]=MI$p.value
+```
+
+```{r,include=FALSE}
+
+##Spatial Lag##
+  
+regression_lag<-lagsarlm(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful,admin_queen1_wb)
+SSE$Lag[4]<-summary(regression_lag)$SSE
+AIC$Lag[4]<-summary(regression_lag)$AIC
+LR$Lag[4]<-summary(regression_lag)$LR1$statistic
+PLR$Lag[4]<-summary(regression_lag)$LR1$p.value
+```
+
+```{r,include=FALSE}
+
+##Spatial error##
+
+regression_err<-errorsarlm(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful,admin_queen1_wb)
+SSE$Err[4]<-summary(regression_err)$SSE
+AIC$Err[4]<-summary(regression_err)$AIC
+LR$Err[4]<-summary(regression_err)$LR1$statistic
+PLR$Err[4]<-summary(regression_err)$LR1$p.value
+```
+
+```{r,include=FALSE}
+
+##Spatial Durbin##
+
+regression_durb<-lagsarlm(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful,admin_queen1_wb,type="mixed")
+SSE$Durb[4]<-summary(regression_durb)$SSE
+AIC$Durb[4]<-summary(regression_durb)$AIC
+LR$Durb[4]<-summary(regression_durb)$LR1$statistic
+PLR$Durb[4]<-summary(regression_durb)$LR1$p.value
+MI<-moran.test(residuals(regression_durb),admin_queen1_wb)
+MORI$Durb[4]=MI$estimate[1]
+MORIP$Durb[4]=MI$p.value
+```
+
+```{r,include=FALSE}
+
+##GWR##
+
+GWRbandwidth <- gwr.sel(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful, adapt=T) 
+gwr.model2 = gwr(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful, adapt=GWRbandwidth, hatmatrix=TRUE,predict=TRUE, se.fit=TRUE) 
+
+SSE$GWR[4]<-gwr.model2$results$rss
+AIC$GWR[4]<-gwr.model2$results$AICh
+MI<-moran.test(gwr.model2$SDF$gwr.e,admin_queen1_wb)
+MORI$GWR[4]=MI$estimate[1]
+MORIP$GWR[4]=MI$p.value
+```
+
+```{r}
+SSE
+```
+
+
+```{r}
+AIC
+```
+
+```{r}
+LR
+```
+
+```{r}
+PLR
+```
+
+```{r}
+MORI
+```
+
+```{r}
+MORIP
+```

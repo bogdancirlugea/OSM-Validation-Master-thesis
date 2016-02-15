@@ -1,0 +1,8 @@
+sudo -u postgres createdb -EUTF8 -O$USER liberia
+echo 'CREATE EXTENSION hstore' | sudo -u postgres psql liberia
+echo 'CREATE EXTENSION btree_gist' | sudo -u postgres psql liberia
+sudo -u postgres psql liberia </usr/share/postgresql/9.3/contrib/postgis-2.1/postgis.sql
+sudo -u postgres psql liberia </usr/share/postgresql/9.3/contrib/postgis-2.1/spatial_ref_sys.sql
+echo "GRANT ALL ON geometry_columns TO $USER" | sudo -u postgres psql liberia
+echo "GRANT ALL ON geography_columns TO $USER" | sudo -u postgres psql liberia
+echo "GRANT ALL ON spatial_ref_sys TO $USER" | sudo -u postgres psql liberia

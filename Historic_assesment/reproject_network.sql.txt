@@ -1,0 +1,2 @@
+ALTER TABLE guinea_may14
+ALTER COLUMN geom TYPE geometry(LINESTRING,4326) USING ST_Transform(geom,4326);

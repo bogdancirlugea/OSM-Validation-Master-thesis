@@ -1,0 +1,71 @@
+---
+title: "Road Density - Regressions tests"
+output: html_document
+---
+
+```{r, echo=FALSE}
+library(maptools)
+library(rgdal)
+library(spdep)
+library(ctv)
+library(spgwr)
+```
+
+Read and prepare data
+
+```{r, echo=FALSE}
+data_location <- "C:/Users/Bogdan/Desktop/Last_countries/Senegal"
+setwd(data_location)
+admin_units <- readOGR(data_location,'sen_adm2_2010',verbose=FALSE)
+admin <- admin_units[,c(2,7,44)]
+colnames(admin@data)[2] <- "ADMINAR"
+colnames(admin@data)[3] <- "POPDENS"
+road_length <-read.csv("road_length_correct.csv", header = TRUE, stringsAsFactors = FALSE)
+road_length_s<-road_length[,c(2,4)]
+colnames(road_length_s)[1] <- "UBID"
+admin<-merge (admin, road_length_s, by="UBID")
+colnames(admin@data)[4] <- "ROADLEN"
+admin@data$ROADDS<-admin@data$ROADLEN/admin@data$ADMINAR
+wealth<-read.csv("wealth_mean.csv", header = TRUE, stringsAsFactors = FALSE)
+wealth_s<-wealth[,c(2,6)]
+admin<-merge (admin, wealth_s, by="UBID")
+colnames(admin@data)[6] <- "WEALTH"
+slope_avg<-read.csv("slope_avg.csv", header = TRUE, stringsAsFactors = FALSE)
+slope_avg_s<-slope_avg[,c(2,6)]
+admin<-merge (admin, slope_avg_s, by="UBID")
+colnames(admin@data)[7] <- "SLOPAVG"
+elev_sdv<-read.csv("elevation_sdv.csv", header = TRUE, stringsAsFactors = FALSE)
+elev_sdv_s<-elev_sdv[,c(2,6)]
+admin<-merge (admin, elev_sdv_s, by="UBID")
+colnames(admin@data)[8] <- "ELEVSTD"
+hist_road_length <-read.csv("jan14_road_length.csv", header = TRUE, stringsAsFactors = FALSE)
+hist_road_length_s<-hist_road_length[,c(2,4)]
+colnames(hist_road_length_s)[1] <- "UBID"
+colnames(hist_road_length_s)[2] <- "JAN14"
+admin<-merge (admin, hist_road_length_s, by="UBID")
+admin@data$ROADDSH<-admin@data$JAN14/admin@data$ADMINAR
+head(admin@data)
+writeOGR(admin, ".", "senegal_complete_corrected", driver="ESRI Shapefile")
+```
+
+
+```{r, echo=FALSE}
+simple_data<-read.csv("length_by_region.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+simple_data$date <- as.Date(simple_data$time_points)
+simple_data$historykm <- simple_data$sum/1000
+oct13<-simple_data[simple_data$date == "2013-08-01", ]
+oct13_subset<- oct13[, c(2, 5)]
+```
+
+
+```{r, echo=FALSE}
+data_location <- "C:/Users/Bogdan/Desktop/Regressions_Scripts/Complete_SHP"
+setwd(data_location)
+guinea_complete <- readOGR(data_location,'senegal_complete_corrected',verbose=FALSE)
+groads<-read.csv("gROADS_senegal.csv", header = TRUE, stringsAsFactors = FALSE, sep=",")
+groads_subset <- groads[,c(2,4)]
+colnames(groads_subset)[2] <- "GLENGTH"
+guinea_complete_groads<-merge (guinea_complete, groads_subset, by="UBID")
+guinea_complete_groads@data$GROADDS<-guinea_complete_groads@data$GLENGTH/guinea_complete_groads@data$ADMINAR
+writeOGR(guinea_complete_groads, ".", "senegal_complete_groads", driver="ESRI Shapefile")
+```

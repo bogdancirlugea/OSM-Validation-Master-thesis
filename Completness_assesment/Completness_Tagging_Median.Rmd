@@ -1,0 +1,322 @@
+---
+title: "Road Density - Regressions tests"
+output: html_document
+---
+
+```{r, include=FALSE}
+library(pastecs)
+library(plyr)
+library(dplyr)
+library(reshape)
+library(reshape2)
+library(ggplot2)
+library(foreign)
+library(rgeos)
+library(rgdal)
+library(maptools)
+library(raster)
+library(classInt)
+library(RColorBrewer)
+library(RANN)
+library(Matrix)
+library(spdep)
+library(gridExtra)
+library(rmarkdown)
+library(xtable)
+library(Rlab)
+require(grid)
+library(plotKML)
+```
+
+###LIBERIA###
+
+```{r, include=FALSE}
+data_location <- "C:/Users/Bogdan/Desktop/Regressions_Scripts/Complete_SHP"
+setwd(data_location)
+admin_useful <- readOGR(data_location,'liberia_complete',verbose=FALSE)
+admin_useful@data$id<-1:length(admin_useful@data$UBID)
+highway_data_location<- "G:/OSM_LastCountries/liberia/input"
+highway_data <- readOGR(highway_data_location,'liberia_latest_highway',verbose=FALSE)
+```
+
+```{r, include=FALSE}
+drops <- c("430_30_04","430_09_12") #Liberia
+admin_useful <-subset(admin_useful, !(UBID %in% drops))
+```
+
+### Calculate tags
+
+```{r, echo=FALSE}
+median(admin_useful@data$ROADDS)
+admin_useful@data$RDSMED <- median(admin_useful@data$ROADDS)
+admin_useful@data$POPDSMED<- median(admin_useful@data$POPDENS)
+admin_useful@data$WEAMED <- median(admin_useful@data$WEALTH)
+admin_useful@data$ESDMED <- median(admin_useful@data$ELEVSTD)
+admin_useful@data$RDSTAGLO <- ifelse(admin_useful@data$ROADDS < admin_useful@data$RDSMED, 1, 0)
+admin_useful@data$RDSTAGHI <- ifelse(admin_useful@data$ROADDS > admin_useful@data$RDSMED, 2, 0)
+admin_useful@data$POPTAGLO <- ifelse(admin_useful@data$POPDENS < admin_useful@data$POPDSMED, 1, 0)
+admin_useful@data$POPTAGHI <- ifelse(admin_useful@data$POPDENS > admin_useful@data$POPDSMED, 2, 0)
+admin_useful@data$WEATAGLO <- ifelse(admin_useful@data$WEALTH < admin_useful@data$WEAMED, 1, 0)
+admin_useful@data$WEATAGHI <- ifelse(admin_useful@data$WEALTH > admin_useful@data$WEAMED, 2, 0)
+admin_useful@data$ESDTAGLO <- ifelse(admin_useful@data$ELEVSTD < admin_useful@data$ESDMED, 1, 0)
+admin_useful@data$ESDTAGHI <- ifelse(admin_useful@data$ELEVSTD > admin_useful@data$ESDMED, 2, 0)
+admin_useful@data$RDSTAGFIN <- admin_useful@data$RDSTAGLO + admin_useful@data$RDSTAGHI
+admin_useful@data$POPTAGFIN <- admin_useful@data$POPTAGLO + admin_useful@data$POPTAGHI
+admin_useful@data$WEATAGFIN <- admin_useful@data$WEATAGLO + admin_useful@data$WEATAGHI
+admin_useful@data$ESDTAGFIN <- admin_useful@data$ESDTAGLO + admin_useful@data$ESDTAGHI
+table(admin_useful@data$RDSTAGFIN)
+table(admin_useful@data$POPTAGFIN)
+table(admin_useful@data$WEATAGFIN)
+table(admin_useful@data$ESDTAGFIN)
+```
+
+### Prediction of areas with missing roads
+
+Orange: Population density     
+Yellow: Wealth  
+Red: Pop dens + Wealth  
+
+```{r, echo=FALSE}
+admin_useful@data$roadspopwealth <- (admin_useful@data$RDSTAGFIN == 1 & admin_useful@data$POPTAGFIN == 2 & admin_useful@data$WEATAGFIN == 2)
+admin_useful_subset<-admin_useful[admin_useful@data$roadspopwealth=='TRUE',]
+centroids.df <- as.data.frame(coordinates(admin_useful_subset))
+names(centroids.df) <- c("long", "lat") 
+new.df <- data.frame(id = admin_useful_subset@data$id, ubid = admin_useful_subset@data$UBID, centroids.df)
+highway_data_select<-highway_data[!is.na(over(highway_data, geometry(admin_useful_subset))),]
+```
+
+```{r, echo=FALSE}
+output_location <- "C:/Users/Bogdan/Desktop/lastmaps"
+setwd(output_location)
+png('liberia_tagg.png',width = 10, height= 7, units = 'in' , res = 300)
+plot(admin_useful, col="lightgrey")
+plot(admin_useful_subset, col="red",add = T)
+text(new.df$long, new.df$lat, new.df$id, cex=.6)
+mtext("Liberia - Discrete classification prediction",font=2,cex=1.5, side = 3, line = 1)
+write.csv(new.df, file = "liberia_tagg.csv")
+kml(admin_useful_subset, file = "liberia_tagg.kml",colour = "yellow",size = 1.2)
+kml(highway_data_select, file = "liberia_highway_tagg.kml",colour = "red",size = 1.2)
+writeOGR(admin_useful_subset, ".", "liberia_tagg", driver="ESRI Shapefile")
+```
+
+###GUINEA###
+
+```{r, include=FALSE}
+data_location <- "C:/Users/Bogdan/Desktop/Regressions_Scripts/Complete_SHP"
+setwd(data_location)
+admin_useful <- readOGR(data_location,'guinea_complete',verbose=FALSE)
+admin_useful@data$id<-1:length(admin_useful@data$UBID)
+highway_data_location<- "G:/Positional_accuracy/roads_shape"
+highway_data <- readOGR(highway_data_location,'guinea_latest_highway',verbose=FALSE)
+```
+
+```{r, include=FALSE}
+drops <- c("96_2_6_41","96_2_6_38","96_2_6_40","96_2_6_42","96_2_6_39") #Guinea
+admin_useful <-subset(admin_useful, !(UBID %in% drops))
+```
+
+### Calculate tags
+
+```{r, echo=FALSE}
+median(admin_useful@data$ROADDS)
+admin_useful@data$RDSMED <- median(admin_useful@data$ROADDS)
+admin_useful@data$POPDSMED<- median(admin_useful@data$POPDENS)
+admin_useful@data$WEAMED <- median(admin_useful@data$WEALTH)
+admin_useful@data$ESDMED <- median(admin_useful@data$ELEVSTD)
+admin_useful@data$RDSTAGLO <- ifelse(admin_useful@data$ROADDS < admin_useful@data$RDSMED, 1, 0)
+admin_useful@data$RDSTAGHI <- ifelse(admin_useful@data$ROADDS > admin_useful@data$RDSMED, 2, 0)
+admin_useful@data$POPTAGLO <- ifelse(admin_useful@data$POPDENS < admin_useful@data$POPDSMED, 1, 0)
+admin_useful@data$POPTAGHI <- ifelse(admin_useful@data$POPDENS > admin_useful@data$POPDSMED, 2, 0)
+admin_useful@data$WEATAGLO <- ifelse(admin_useful@data$WEALTH < admin_useful@data$WEAMED, 1, 0)
+admin_useful@data$WEATAGHI <- ifelse(admin_useful@data$WEALTH > admin_useful@data$WEAMED, 2, 0)
+admin_useful@data$ESDTAGLO <- ifelse(admin_useful@data$ELEVSTD < admin_useful@data$ESDMED, 1, 0)
+admin_useful@data$ESDTAGHI <- ifelse(admin_useful@data$ELEVSTD > admin_useful@data$ESDMED, 2, 0)
+admin_useful@data$RDSTAGFIN <- admin_useful@data$RDSTAGLO + admin_useful@data$RDSTAGHI
+admin_useful@data$POPTAGFIN <- admin_useful@data$POPTAGLO + admin_useful@data$POPTAGHI
+admin_useful@data$WEATAGFIN <- admin_useful@data$WEATAGLO + admin_useful@data$WEATAGHI
+admin_useful@data$ESDTAGFIN <- admin_useful@data$ESDTAGLO + admin_useful@data$ESDTAGHI
+table(admin_useful@data$RDSTAGFIN)
+table(admin_useful@data$POPTAGFIN)
+table(admin_useful@data$WEATAGFIN)
+table(admin_useful@data$ESDTAGFIN)
+```
+
+### Prediction of areas with missing roads
+
+Orange: Population density     
+Yellow: Wealth  
+Red: Pop dens + Wealth  
+
+```{r, echo=FALSE}
+admin_useful@data$roadspopwealth <- (admin_useful@data$RDSTAGFIN == 1 & admin_useful@data$POPTAGFIN == 2 & admin_useful@data$WEATAGFIN == 2)
+admin_useful_subset<-admin_useful[admin_useful@data$roadspopwealth=='TRUE',]
+centroids.df <- as.data.frame(coordinates(admin_useful_subset))
+names(centroids.df) <- c("long", "lat") 
+new.df <- data.frame(id = admin_useful_subset@data$id, ubid = admin_useful_subset@data$UBID, centroids.df)
+highway_data_select<-highway_data[!is.na(over(highway_data, geometry(admin_useful_subset))),]
+```
+
+```{r, echo=FALSE}
+output_location <- "C:/Users/Bogdan/Desktop/lastmaps"
+setwd(output_location)
+png('guinea_tagg.png',width = 10, height= 7, units = 'in' , res = 300)
+plot(admin_useful, col="lightgrey")
+plot(admin_useful_subset, col="red",add = T)
+text(new.df$long, new.df$lat, new.df$id, cex=.6)
+mtext("Guinea - Discrete classification prediction",font=2,cex=1.5, side = 3, line = 1)
+write.csv(new.df, file = "guinea_tagg.csv")
+kml(admin_useful_subset, file = "guinea_tagg.kml",colour = "yellow",size = 1.2)
+kml(highway_data_select, file = "guinea_highway_tagg.kml",colour = "red",size = 1.2)
+writeOGR(admin_useful_subset, ".", "guinea_tagg", driver="ESRI Shapefile")
+```
+
+###GHANA###
+
+```{r, include=FALSE}
+data_location <- "C:/Users/Bogdan/Desktop/Regressions_Scripts/Complete_SHP"
+setwd(data_location)
+admin_useful <- readOGR(data_location,'ghana_complete_corrected',verbose=FALSE)
+admin_useful@data$id<-1:length(admin_useful@data$UBID)
+highway_data_location<- "G:/OSM_LastCountries/Ghana/input"
+highway_data <- readOGR(highway_data_location,'ghana_highway',verbose=FALSE)
+```
+
+```{r, include=FALSE}
+drops <- c("288_119","288_36","288_118","288_139") #Ghana 
+admin_useful <-subset(admin_useful, !(UBID %in% drops))
+```
+
+### Calculate tags
+
+```{r, echo=FALSE}
+median(admin_useful@data$ROADDS)
+admin_useful@data$RDSMED <- median(admin_useful@data$ROADDS)
+admin_useful@data$POPDSMED<- median(admin_useful@data$POPDENS)
+admin_useful@data$WEAMED <- median(admin_useful@data$WEALTH)
+admin_useful@data$ESDMED <- median(admin_useful@data$ELEVSTD)
+admin_useful@data$RDSTAGLO <- ifelse(admin_useful@data$ROADDS < admin_useful@data$RDSMED, 1, 0)
+admin_useful@data$RDSTAGHI <- ifelse(admin_useful@data$ROADDS > admin_useful@data$RDSMED, 2, 0)
+admin_useful@data$POPTAGLO <- ifelse(admin_useful@data$POPDENS < admin_useful@data$POPDSMED, 1, 0)
+admin_useful@data$POPTAGHI <- ifelse(admin_useful@data$POPDENS > admin_useful@data$POPDSMED, 2, 0)
+admin_useful@data$WEATAGLO <- ifelse(admin_useful@data$WEALTH < admin_useful@data$WEAMED, 1, 0)
+admin_useful@data$WEATAGHI <- ifelse(admin_useful@data$WEALTH > admin_useful@data$WEAMED, 2, 0)
+admin_useful@data$ESDTAGLO <- ifelse(admin_useful@data$ELEVSTD < admin_useful@data$ESDMED, 1, 0)
+admin_useful@data$ESDTAGHI <- ifelse(admin_useful@data$ELEVSTD > admin_useful@data$ESDMED, 2, 0)
+admin_useful@data$RDSTAGFIN <- admin_useful@data$RDSTAGLO + admin_useful@data$RDSTAGHI
+admin_useful@data$POPTAGFIN <- admin_useful@data$POPTAGLO + admin_useful@data$POPTAGHI
+admin_useful@data$WEATAGFIN <- admin_useful@data$WEATAGLO + admin_useful@data$WEATAGHI
+admin_useful@data$ESDTAGFIN <- admin_useful@data$ESDTAGLO + admin_useful@data$ESDTAGHI
+table(admin_useful@data$RDSTAGFIN)
+table(admin_useful@data$POPTAGFIN)
+table(admin_useful@data$WEATAGFIN)
+table(admin_useful@data$ESDTAGFIN)
+```
+
+### Prediction of areas with missing roads
+
+Orange: Population density     
+Yellow: Wealth  
+Red: Pop dens + Wealth  
+
+```{r, echo=FALSE}
+admin_useful@data$roadspopwealth <- (admin_useful@data$RDSTAGFIN == 1 & admin_useful@data$POPTAGFIN == 2 & admin_useful@data$WEATAGFIN == 2)
+admin_useful_subset<-admin_useful[admin_useful@data$roadspopwealth=='TRUE',]
+centroids.df <- as.data.frame(coordinates(admin_useful_subset))
+names(centroids.df) <- c("long", "lat") 
+new.df <- data.frame(id = admin_useful_subset@data$id, ubid = admin_useful_subset@data$UBID, centroids.df)
+highway_data_select<-highway_data[!is.na(over(highway_data, geometry(admin_useful_subset))),]
+```
+
+```{r, echo=FALSE}
+output_location <- "C:/Users/Bogdan/Desktop/lastmaps"
+setwd(output_location)
+png('ghana_tagg.png',width = 10, height= 7, units = 'in' , res = 300)
+plot(admin_useful, col="lightgrey")
+plot(admin_useful_subset, col="red",add = T)
+text(new.df$long, new.df$lat, new.df$id, cex=.6)
+mtext("Ghana - Discrete classification prediction",font=2,cex=1.5, side = 3, line = 1)
+write.csv(new.df, file = "ghana_tagg.csv")
+kml(admin_useful_subset, file = "ghana_tagg.kml",colour = "yellow",size = 1.2)
+kml(highway_data_select, file = "ghana_highway_tagg.kml",colour = "red",size = 1.2)
+writeOGR(admin_useful_subset, ".", "ghana_tagg", driver="ESRI Shapefile")
+```
+
+###SENEGAL###
+
+```{r, include=FALSE}
+data_location <- "C:/Users/Bogdan/Desktop/Regressions_Scripts/Complete_SHP"
+setwd(data_location)
+admin_useful <- readOGR(data_location,'senegal_complete_corrected',verbose=FALSE)
+admin_useful@data$id<-1:length(admin_useful@data$UBID)
+highway_data_location<- "G:/OSM_LastCountries/Senegal/input"
+highway_data <- readOGR(highway_data_location,'senegal_highways',verbose=FALSE)
+```
+
+```{r, include=FALSE}
+drops <- c("199_1_2_2_2001","199_1_2_2_2000","199_1_1_1_700") #Senegal - 199_1_3_3_21 might also be excluded
+admin_useful <-subset(admin_useful, !(UBID %in% drops))
+```
+
+### Calculate tags
+
+```{r, echo=FALSE}
+median(admin_useful@data$ROADDS)
+admin_useful@data$RDSMED <- median(admin_useful@data$ROADDS)
+admin_useful@data$POPDSMED<- median(admin_useful@data$POPDENS)
+admin_useful@data$WEAMED <- median(admin_useful@data$WEALTH)
+admin_useful@data$ESDMED <- median(admin_useful@data$ELEVSTD)
+admin_useful@data$RDSTAGLO <- ifelse(admin_useful@data$ROADDS < admin_useful@data$RDSMED, 1, 0)
+admin_useful@data$RDSTAGHI <- ifelse(admin_useful@data$ROADDS > admin_useful@data$RDSMED, 2, 0)
+admin_useful@data$POPTAGLO <- ifelse(admin_useful@data$POPDENS < admin_useful@data$POPDSMED, 1, 0)
+admin_useful@data$POPTAGHI <- ifelse(admin_useful@data$POPDENS > admin_useful@data$POPDSMED, 2, 0)
+admin_useful@data$WEATAGLO <- ifelse(admin_useful@data$WEALTH < admin_useful@data$WEAMED, 1, 0)
+admin_useful@data$WEATAGHI <- ifelse(admin_useful@data$WEALTH > admin_useful@data$WEAMED, 2, 0)
+admin_useful@data$ESDTAGLO <- ifelse(admin_useful@data$ELEVSTD < admin_useful@data$ESDMED, 1, 0)
+admin_useful@data$ESDTAGHI <- ifelse(admin_useful@data$ELEVSTD > admin_useful@data$ESDMED, 2, 0)
+admin_useful@data$RDSTAGFIN <- admin_useful@data$RDSTAGLO + admin_useful@data$RDSTAGHI
+admin_useful@data$POPTAGFIN <- admin_useful@data$POPTAGLO + admin_useful@data$POPTAGHI
+admin_useful@data$WEATAGFIN <- admin_useful@data$WEATAGLO + admin_useful@data$WEATAGHI
+admin_useful@data$ESDTAGFIN <- admin_useful@data$ESDTAGLO + admin_useful@data$ESDTAGHI
+table(admin_useful@data$RDSTAGFIN)
+table(admin_useful@data$POPTAGFIN)
+table(admin_useful@data$WEATAGFIN)
+table(admin_useful@data$ESDTAGFIN)
+```
+
+### Prediction of areas with missing roads
+
+Orange: Population density     
+Yellow: Wealth  
+Red: Pop dens + Wealth  
+
+```{r, echo=FALSE}
+admin_useful@data$roadspopwealth <- (admin_useful@data$RDSTAGFIN == 1 & admin_useful@data$POPTAGFIN == 2 & admin_useful@data$WEATAGFIN == 2)
+admin_useful_subset<-admin_useful[admin_useful@data$roadspopwealth=='TRUE',]
+centroids.df <- as.data.frame(coordinates(admin_useful_subset))
+names(centroids.df) <- c("long", "lat") 
+new.df <- data.frame(id = admin_useful_subset@data$id, ubid = admin_useful_subset@data$UBID, centroids.df)
+highway_data_select<-highway_data[!is.na(over(highway_data, geometry(admin_useful_subset))),]
+```
+
+```{r, echo=FALSE}
+output_location <- "C:/Users/Bogdan/Desktop/lastmaps"
+setwd(output_location)
+png('senegal_tagg.png',width = 10, height= 7, units = 'in' , res = 300)
+plot(admin_useful, col="lightgrey")
+plot(admin_useful_subset, col="red",add = T)
+text(new.df$long, new.df$lat, new.df$id, cex=.6)
+mtext("Senegal - Discrete classification prediction",font=2,cex=1.5, side = 3, line = 1)
+write.csv(new.df, file = "senegal_tagg.csv")
+kml(admin_useful_subset, file = "senegal_tagg.kml",colour = "yellow",size = 1.2)
+kml(highway_data_select, file = "senegal_highway_tagg.kml",colour = "red",size = 1.2)
+writeOGR(admin_useful_subset, ".", "senegal_tagg", driver="ESRI Shapefile")
+```
+
+
+
+
+
+
+
+
+

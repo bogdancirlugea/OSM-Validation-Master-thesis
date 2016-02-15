@@ -1,0 +1,120 @@
+---
+title: "Road Density - Regressions tests"
+output: html_document
+---
+
+```{r, include=FALSE}
+library(pastecs)
+library(plyr)
+library(dplyr)
+library(reshape)
+library(reshape2)
+library(ggplot2)
+library(foreign)
+library(rgeos)
+library(rgdal)
+library(maptools)
+library(raster)
+library(classInt)
+library(RColorBrewer)
+library(RANN)
+library(Matrix)
+library(spdep)
+library(gridExtra)
+library(rmarkdown)
+library(xtable)
+library(Rlab)
+require(grid)
+```
+
+
+```{r, echo=FALSE}
+data_location <- "C:/Users/Bogdan/Desktop/Regressions_Scripts/Complete_SHP"
+admin_useful <- readOGR(data_location,'senegal_complete_corrected',verbose=FALSE)
+```
+
+**OSM present road data**
+
+```{r, echo=FALSE}
+data<-admin_useful@data
+attach(data)
+vars <- cbind(ROADDS, ROADLEN, POPDENS, WEALTH, ELEVSTD, SLOPAVG )
+options(digits = 2)
+options(scipen = 100)
+stat.desc(vars, basic = FALSE)
+stat.desc(vars, desc = FALSE)
+par(mfrow = c(2, 3))
+hist(ROADDS, main = "Road density (OSM, 8/2015)")
+hist(ROADLEN, main = "Road length (OSM, 8/2015)")
+hist(POPDENS, main = "Population density (GPW, 2010)")
+hist(WEALTH, main = "Wealth score (DHS, 2012)")
+hist(ELEVSTD, main = "Elevation STD (DHS, 2012)")
+hist(SLOPAVG, main = "Mean Slope (DHS, 2012)")
+```
+
+```{r, echo=FALSE}
+par(mfrow = c(1, 3))
+plot(log(POPDENS), log(ROADLEN), ylab = "log(ROAD LENGTH)", xlab = "log(POPULATION DENSITY)")
+plot(log(POPDENS),log(ROADDS), ylab = "log(ROAD DENSITY)", xlab = "log(POPULATION DENSITY)")
+plot(log(WEALTH), log(ROADDS),  ylab = "log(ROAD DENSITY)", xlab= "log(WEALTH)")
+par(mfrow = c(1, 3))
+plot(log(ELEVSTD), log(ROADDS),  ylab = "log(ROAD DENSITY)", xlab= "log(ELEVATION SD)")
+plot(log(SLOPAVG), log(ROADDS),  ylab = "log(ROAD DENSITY)", xlab= "log(SLOPE AVG)")
+```
+
+```{r, echo=FALSE}
+data <- within(data, WEALTHQRT <- as.integer(cut(WEALTH, quantile(WEALTH, probs=0:4/4), include.lowest=TRUE)))
+data <- within(data, POPQRT <- as.integer(cut(POPDENS, quantile(POPDENS, probs=0:4/4), include.lowest = TRUE)))
+data <- within(data, ELEVQRT <- as.integer(cut(ELEVSTD, quantile(ELEVSTD, probs=0:4/4), include.lowest = TRUE)))
+par(mfrow = c(2, 2))
+boxplot(ROADDS~POPQRT,data = data, main="Road density by population quartiles", xlab="POPULATION DENSITY, BY QUARTILES", ylab="ROAD DENSITY")
+boxplot(ROADDS~WEALTHQRT,data = data, main="Road density by wealth quartiles", xlab="WEALTH, BY QUARTILES", ylab="ROAD DENSITY")
+boxplot(ROADDS~ELEVQRT,data = data, main="Road density by Elev SD quartiles", xlab="ELEV SD, BY QUARTILES", ylab="ROAD DENSITY")
+```
+
+```{r}
+cor(vars, use = "everything", method = "spearman") #based on ranks
+cor(vars, use = "everything", method = "pearson") #based on values, linear relationship
+```
+
+**OSM history road data**
+
+```{r, echo=FALSE}
+data<-admin_useful@data
+attach(data)
+vars <- cbind(ROADDSH, POPDENS, WEALTH, ELEVSTD, SLOPAVG )
+options(digits = 2)
+options(scipen = 100)
+stat.desc(vars, basic = FALSE)
+stat.desc(vars, desc = FALSE)
+par(mfrow = c(2, 3))
+hist(ROADDSH, main = "Road density (OSM, 8/2015)")
+hist(POPDENS, main = "Population density (GPW, 2010)")
+hist(WEALTH, main = "Wealth score (DHS, 2012)")
+hist(ELEVSTD, main = "Elevation STD (DHS, 2012)")
+hist(SLOPAVG, main = "Mean Slope (DHS, 2012)")
+```
+
+```{r, echo=FALSE}
+par(mfrow = c(1, 3))
+plot(log(POPDENS),log(ROADDSH), ylab = "log(ROAD DENSITY)", xlab = "log(POPULATION DENSITY)")
+plot(log(WEALTH), log(ROADDSH),  ylab = "log(ROAD DENSITY)", xlab= "log(WEALTH)")
+par(mfrow = c(1, 3))
+plot(log(ELEVSTD), log(ROADDSH),  ylab = "log(ROAD DENSITY)", xlab= "log(ELEVATION SD)")
+plot(log(SLOPAVG), log(ROADDSH),  ylab = "log(ROAD DENSITY)", xlab= "log(SLOPE AVG)")
+```
+
+```{r, echo=FALSE}
+data <- within(data, WEALTHQRT <- as.integer(cut(WEALTH, quantile(WEALTH, probs=0:4/4), include.lowest=TRUE)))
+data <- within(data, POPQRT <- as.integer(cut(POPDENS, quantile(POPDENS, probs=0:4/4), include.lowest = TRUE)))
+data <- within(data, ELEVQRT <- as.integer(cut(ELEVSTD, quantile(ELEVSTD, probs=0:4/4), include.lowest = TRUE)))
+par(mfrow = c(2, 2))
+boxplot(ROADDSH~POPQRT,data = data, main="Road density by population quartiles", xlab="POPULATION DENSITY, BY QUARTILES", ylab="ROAD DENSITY")
+boxplot(ROADDSH~WEALTHQRT,data = data, main="Road density by wealth quartiles", xlab="WEALTH, BY QUARTILES", ylab="ROAD DENSITY")
+boxplot(ROADDSH~ELEVQRT,data = data, main="Road density by Elev SD quartiles", xlab="ELEV SD, BY QUARTILES", ylab="ROAD DENSITY")
+```
+
+```{r}
+cor(vars, use = "complete", method = "spearman") #based on ranks
+cor(vars, use = "complete", method = "pearson") #based on values, linear relationship
+```

@@ -1,0 +1,198 @@
+---
+title: "Road Density - Regressions tests"
+output: html_document
+---
+
+```{r, include=FALSE}
+library(maptools)
+library(rgdal)
+library(spdep)
+library(ctv)
+library(spgwr)
+library(RColorBrewer)
+library(classInt)
+```
+
+
+```{r, echo=FALSE}
+data_location <- "C:/Users/Bogdan/Desktop/Regressions_Scripts/Complete_SHP"
+admin_useful <- readOGR(data_location,'liberia_complete',verbose=FALSE)
+```
+
+```{r, echo=FALSE}
+drops <- c("430_30_04","430_09_12") #Liberia
+admin_useful <-subset(admin_useful, !(UBID %in% drops))
+```
+## Create weigths ##
+
+**Queen 1**
+
+```{r, echo=FALSE}
+admin_queen1<-poly2nb(admin_useful)
+coords<-coordinates(admin_useful)
+plot(admin_useful)
+plot(admin_queen1, coords, add=T)
+admin_queen1_wb<-nb2listw(admin_queen1,style="B",zero.policy = T)
+```
+
+
+## Lag Predict ##
+
+```{r, include=FALSE}
+regression<-lagsarlm(ROADDS ~ POPDENS + WEALTH +POPDENS*WEALTH, data=admin_useful,admin_queen1_wb)
+summary(regression)
+admin_useful@data$residuals<-residuals(regression)
+admin_useful_subset<-admin_useful[admin_useful@data$residuals<0,]
+median<-median(admin_useful_subset@data$residuals)
+quantile<-quantile(admin_useful_subset@data$residuals,.25)
+admin_useful_median<-admin_useful_subset[admin_useful_subset@data$residuals<median,]
+admin_useful_quantile<-admin_useful_subset[admin_useful_subset@data$residuals<quantile,]
+admin_useful_one<-admin_useful_subset[admin_useful_subset@data$residuals<-1,]
+```
+
+```{r, echo=FALSE}
+png('liberia_lag_median.png',width = 10, height= 7, units = 'in' , res = 300)
+plot(admin_useful, col="lightgrey")
+plot(admin_useful_median, col="red",add = T)
+mtext("Lag prediction - Median", side = 3, line = 1)
+dev.off()
+
+png('liberia_lag_quantile.png',width = 10, height= 7, units = 'in' , res = 300)
+plot(admin_useful, col="lightgrey")
+plot(admin_useful_quantile, col="red",add = T)
+mtext("Lag prediction - Quantile", side = 3, line = 1)
+dev.off()
+
+png('liberia_lag_one.png',width = 10, height= 7, units = 'in' , res = 300)
+plot(admin_useful, col="lightgrey")
+plot(admin_useful_one, col="red",add = T)
+mtext("Lag prediction - 1", side = 3, line = 1)
+dev.off()
+```
+
+**Lag nr of regions**
+
+```{r, echo=FALSE}
+length(admin_useful_subset@data$UBID)
+```
+
+## Error Predict ##
+
+```{r, include=FALSE}
+regression<-errorsarlm(ROADDS ~ POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful,admin_queen1_wb)
+summary(regression)
+admin_useful@data$residuals<-residuals(regression)
+admin_useful_subset<-admin_useful[admin_useful@data$residuals<0,]
+median<-median(admin_useful_subset@data$residuals)
+quantile<-quantile(admin_useful_subset@data$residuals,.25)
+admin_useful_median<-admin_useful_subset[admin_useful_subset@data$residuals<median,]
+admin_useful_quantile<-admin_useful_subset[admin_useful_subset@data$residuals<quantile,]
+admin_useful_one<-admin_useful_subset[admin_useful_subset@data$residuals<-1,]
+```
+
+```{r, echo=FALSE}
+png('liberia_err_median.png',width = 10, height= 7, units = 'in' , res = 300)
+plot(admin_useful, col="lightgrey")
+plot(admin_useful_median, col="red",add = T)
+mtext("Error prediction - Median", side = 3, line = 1)
+dev.off()
+
+png('liberia_err_quantile.png',width = 10, height= 7, units = 'in' , res = 300)
+plot(admin_useful, col="lightgrey")
+plot(admin_useful_quantile, col="red",add = T)
+mtext("Error prediction - Quantile", side = 3, line = 1)
+dev.off()
+
+png('liberia_err_one.png',width = 10, height= 7, units = 'in' , res = 300)
+plot(admin_useful, col="lightgrey")
+plot(admin_useful_one, col="red",add = T)
+mtext("Error prediction - 1", side = 3, line = 1)
+dev.off()
+```
+
+**Error nr of regions**
+
+```{r, echo=FALSE}
+length(admin_useful_subset@data$UBID)
+```
+
+## Durbin Predict ##
+
+```{r, include=FALSE}
+regression<-lagsarlm(ROADDS ~ POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful,admin_queen1_wb, type="mixed")
+summary(regression)
+admin_useful@data$residuals<-residuals(regression)
+admin_useful_subset<-admin_useful[admin_useful@data$residuals<0,]
+median<-median(admin_useful_subset@data$residuals)
+quantile<-quantile(admin_useful_subset@data$residuals,.25)
+admin_useful_median<-admin_useful_subset[admin_useful_subset@data$residuals<median,]
+admin_useful_quantile<-admin_useful_subset[admin_useful_subset@data$residuals<quantile,]
+admin_useful_one<-admin_useful_subset[admin_useful_subset@data$residuals<-1,]
+```
+
+```{r, echo=FALSE}
+png('liberia_durb_median.png',width = 10, height= 7, units = 'in' , res = 300)
+plot(admin_useful, col="lightgrey")
+plot(admin_useful_median, col="red",add = T)
+mtext("Durbin prediction - Median", side = 3, line = 1)
+dev.off()
+
+png('liberia_durb_quantile.png',width = 10, height= 7, units = 'in' , res = 300)
+plot(admin_useful, col="lightgrey")
+plot(admin_useful_quantile, col="red",add = T)
+mtext("Durbin prediction - Quantile", side = 3, line = 1)
+dev.off()
+
+png('liberia_durb_one.png',width = 10, height= 7, units = 'in' , res = 300)
+plot(admin_useful, col="lightgrey")
+plot(admin_useful_one, col="red",add = T)
+mtext("Durbin prediction - 1", side = 3, line = 1)
+dev.off()
+```
+
+**Durbin nr of regions**
+
+```{r, echo=FALSE}
+length(admin_useful_subset@data$UBID)
+```
+
+## GWR Predict ##
+
+```{r, , include=FALSE}
+#compute bandwidth
+GWRbandwidth <- gwr.sel(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful, adapt=T) 
+#run the gwr model
+gwr.model2 = gwr(ROADDS~POPDENS + WEALTH + POPDENS*WEALTH, data=admin_useful, adapt=GWRbandwidth, hatmatrix=TRUE,predict=TRUE, se.fit=TRUE) 
+#print the results of the model
+admin_useful@data$residuals <- gwr.model2$SDF$gwr.e
+admin_useful_subset<-admin_useful[admin_useful@data$residuals<0,]
+median<-median(admin_useful_subset@data$residuals)
+quantile<-quantile(admin_useful_subset@data$residuals,.25)
+admin_useful_median<-admin_useful_subset[admin_useful_subset@data$residuals<median,]
+admin_useful_quantile<-admin_useful_subset[admin_useful_subset@data$residuals<quantile,]
+admin_useful_one<-admin_useful_subset[admin_useful_subset@data$residuals<-1,]
+```
+
+```{r, echo=FALSE}
+png('liberia_gwr_median.png',width = 10, height= 7, units = 'in' , res = 300)
+plot(admin_useful, col="lightgrey")
+plot(admin_useful_median, col="red",add = T)
+mtext("GWR prediction - Median", side = 3, line = 1)
+dev.off()
+
+png('liberia_gwr_quantile.png',width = 10, height= 7, units = 'in' , res = 300)
+plot(admin_useful, col="lightgrey")
+plot(admin_useful_quantile, col="red",add = T)
+mtext("GWR prediction - Quantile", side = 3, line = 1)
+dev.off()
+
+png('liberia_gwr_one.png',width = 10, height= 7, units = 'in' , res = 300)
+plot(admin_useful, col="lightgrey")
+plot(admin_useful_one, col="red",add = T)
+mtext("GWR prediction - 1", side = 3, line = 1)
+dev.off()
+```
+
+```{r, echo=FALSE}
+length(admin_useful_subset@data$UBID)
+```

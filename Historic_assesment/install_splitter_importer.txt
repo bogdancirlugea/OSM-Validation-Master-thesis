@@ -1,0 +1,11 @@
+git clone https://github.com/MaZderMind/osm-history-splitter.git
+cd osm-history-splitter
+make
+sudo make install
+cd ..
+
+git clone https://github.com/MaZderMind/osm-history-renderer.git
+cd osm-history-renderer/importer
+make
+sudo make install
+cd ../..
